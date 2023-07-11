@@ -87,12 +87,16 @@ void lidar(double horiFovMin, double horiFovMax, double vertFovMin, double vertF
 	double vertexCount = (horiFovMax - horiFovMin) * (1 / horiStep) * (vertFovMax - vertFovMin) * (1 / vertStep);
 	std::ofstream fileOutput;
 	fileOutput.open(filePath);
-	fileOutput << "ply\nformat ascii 1.0\nelement vertex " + std::to_string((int)vertexCount) + "\nproperty float x\nproperty float y\nproperty float z\nproperty uchar red\nproperty uchar green\nproperty uchar blue\nend_header\n";
-	
+	// fileOutput << "ply\nformat ascii 1.0\nelement vertex " + std::to_string((int)vertexCount) + "\nproperty float x\nproperty float y\nproperty float z\nproperty uchar red\nproperty uchar green\nproperty uchar blue\nend_header\n";
+
 	GAMEPLAY::SET_GAME_PAUSED(true);
 	TIME::PAUSE_CLOCK(true);
 	Vector3 rot = CAM::GET_GAMEPLAY_CAM_ROT(2);
 	Vector3 coord = CAM::GET_GAMEPLAY_CAM_COORD();
+	std::string cameraCenter = "";
+	cameraCenter = "cameraCenter " + std::to_string(coord.x) + " " + std::to_string(coord.y) + " " + std::to_string(coord.z) + "\n";
+	fileOutput << cameraCenter;
+	fileOutput << "x y z r g b norm_x norm_y norm_z\n";
 	
 	for (double z = horiFovMin; z < horiFovMax; z += horiStep) {
 		std::string vertexData = "";
@@ -115,7 +119,10 @@ void lidar(double horiFovMin, double horiFovMax, double vertFovMin, double vertF
 					r = 0; g = 0; b = 255;
 				}
 			}
-			vertexData += std::to_string(result.hitCoordinates.x) + " " + std::to_string(result.hitCoordinates.y) + " " + std::to_string(result.hitCoordinates.z) + " " + std::to_string(r) + " " + std::to_string(g) + " " + std::to_string(b) + "\n";
+			vertexData += std::to_string(result.hitCoordinates.x) + " " + std::to_string(result.hitCoordinates.y) + " " \
+						  + std::to_string(result.hitCoordinates.z) + " " + std::to_string(r) + " " + std::to_string(g) + " " \
+						  + std::to_string(b) + " " + std::to_string(result.surfaceNormal.x) + " " + std::to_string(result.surfaceNormal.y) \
+						  + " " + std::to_string(result.surfaceNormal.z) + "\n";
 		}
 		fileOutput << vertexData;
 	}
@@ -146,7 +153,7 @@ void ScriptMain() {
 			inputFile >> ignore >> ignore >> range;
 			inputFile >> ignore >> ignore >> filename;
 			inputFile.close();
-			lidar(parameters[0], parameters[1], parameters[2], parameters[3], parameters[4], parameters[5], range, "LiDAR GTA V/"+filename+".ply");
+			lidar(parameters[0], parameters[1], parameters[2], parameters[3], parameters[4], parameters[5], range, "LiDAR GTA V/"+filename+".txt");
 		}
 		WAIT(0);
 	}
