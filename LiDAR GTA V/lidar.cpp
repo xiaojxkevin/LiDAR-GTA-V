@@ -129,14 +129,22 @@ void lidar(double horiFovMin, double horiFovMax, double vertFovMin, double vertF
 	GAMEPLAY::SET_GAME_PAUSED(false);
 	TIME::PAUSE_CLOCK(false);
 	fileOutput.close();
-	notificationOnLeft("LiDAR Point Cloud written to file.");
+	std::string notice = "LiDAR Point Cloud written to" + filePath;
+	notificationOnLeft(notice);
 }
 
 void ScriptMain() {
 	srand(GetTickCount());
+	unsigned int count(0);
 	while (true) {
 		if (IsKeyJustUp(VK_F6)) {
-			double parameters[6];
+			std::string file_path = "LiDAR GTA V/point_data_" + std::to_string(count) + ".txt";
+			lidar(0.0, 360.0, -30.0, 10.0, 0.25, 0.25, 75, file_path);
+			++count;
+			// if you open the .cfg file, you will notice why we are doing the following thing.
+			// and since that file does not change, we even do not need this file any more.
+			/*
+			double parameters[6]{};
 			int range;
 			std::string filename;
 			std::string ignore;
@@ -147,13 +155,13 @@ void ScriptMain() {
 				continue;
 			}
 			inputFile >> ignore >> ignore >> ignore >> ignore >> ignore;
-			for (int i = 0; i < 6;i++) {
+			for (int i = 0; i < 6; i++) {
 				inputFile >> ignore >> ignore >> parameters[i];
 			}
 			inputFile >> ignore >> ignore >> range;
 			inputFile >> ignore >> ignore >> filename;
 			inputFile.close();
-			lidar(parameters[0], parameters[1], parameters[2], parameters[3], parameters[4], parameters[5], range, "LiDAR GTA V/"+filename+".txt");
+			lidar(parameters[0], parameters[1], parameters[2], parameters[3], parameters[4], parameters[5], range, "LiDAR GTA V/" + filename + ".txt");*/
 		}
 		WAIT(0);
 	}
