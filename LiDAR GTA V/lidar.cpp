@@ -7,6 +7,7 @@
 #include <math.h>
 
 #pragma warning(disable : 4244 4305) // double <-> float conversions
+constexpr unsigned int NUMBER_FRAME = 1000;
 
 void notificationOnLeft(std::string notificationText) {
 	UI::_SET_NOTIFICATION_TEXT_ENTRY("CELL_EMAIL_BCON");
@@ -84,19 +85,20 @@ ray angleOffsetRaycast(Vector3 source, Vector3 cameraRotation, double angleOffse
 }
 
 void lidar(double horiFovMin, double horiFovMax, double vertFovMin, double vertFovMax, double horiStep, double vertStep,int range,std::string filePath) {
-	double vertexCount = (horiFovMax - horiFovMin) * (1 / horiStep) * (vertFovMax - vertFovMin) * (1 / vertStep);
-	std::ofstream fileOutput;
-	fileOutput.open(filePath);
-	// fileOutput << "ply\nformat ascii 1.0\nelement vertex " + std::to_string((int)vertexCount) + "\nproperty float x\nproperty float y\nproperty float z\nproperty uchar red\nproperty uchar green\nproperty uchar blue\nend_header\n";
-
+	std::ofstream data_file;
+	data_file.open(filePath);
+	// To stop the game
 	GAMEPLAY::SET_GAME_PAUSED(true);
 	TIME::PAUSE_CLOCK(true);
+	
+	// double vertexCount = (horiFovMax - horiFovMin) * (1 / horiStep) * (vertFovMax - vertFovMin) * (1 / vertStep);
 	Vector3 rot = CAM::GET_GAMEPLAY_CAM_ROT(2);
 	Vector3 coord = CAM::GET_GAMEPLAY_CAM_COORD();
-	std::string cameraCenter = "";
-	cameraCenter = "cameraCenter " + std::to_string(coord.x) + " " + std::to_string(coord.y) + " " + std::to_string(coord.z) + "\n";
-	fileOutput << cameraCenter;
-	fileOutput << "x y z r g b norm_x norm_y norm_z\n";
+	std::string cameraCenter = "cameraCenter " + std::to_string(coord.x) + " " + std::to_string(coord.y) + " " + std::to_string(coord.z) + "\n";
+	std::string camerRot = "camerRotation " + std::to_string(rot.x) + " " + std::to_string(rot.y) + " " + std::to_string(rot.z) + "\n";
+	data_file << cameraCenter;
+	data_file << camerRot;
+	data_file << "x y z r g b norm_x norm_y norm_z\n";
 	
 	for (double z = horiFovMin; z < horiFovMax; z += horiStep) {
 		std::string vertexData = "";
@@ -124,45 +126,43 @@ void lidar(double horiFovMin, double horiFovMax, double vertFovMin, double vertF
 						  + std::to_string(b) + " " + std::to_string(result.surfaceNormal.x) + " " + std::to_string(result.surfaceNormal.y) \
 						  + " " + std::to_string(result.surfaceNormal.z) + "\n";
 		}
-		fileOutput << vertexData;
+		data_file << vertexData;
 	}
 	GAMEPLAY::SET_GAME_PAUSED(false);
 	TIME::PAUSE_CLOCK(false);
-	fileOutput.close();
-	std::string notice = "LiDAR Point Cloud written to" + filePath;
+	data_file.close();
+	std::string notice = "Data Written to " + filePath;
 	notificationOnLeft(notice);
 }
 
 void ScriptMain() {
-	srand(GetTickCount());
-	unsigned int count(0);
+	srand(GetTickCount()); // I do not know why author use something here
+	unsigned int count(0); // initialize the number of point cloud data we will have 
+	// wait for the command(pressing F6) to start
+
+	Vehicle car;
 	while (true) {
-		if (IsKeyJustUp(VK_F6)) {
-			std::string file_path = "LiDAR GTA V/point_data_" + std::to_string(count) + ".txt";
-			lidar(0.0, 360.0, -30.0, 10.0, 0.25, 0.25, 75, file_path);
-			++count;
-			// if you open the .cfg file, you will notice why we are doing the following thing.
-			// and since that file does not change, we even do not need this file any more.
-			/*
-			double parameters[6]{};
-			int range;
-			std::string filename;
-			std::string ignore;
-			std::ifstream inputFile;
-			inputFile.open("LiDAR GTA V/LiDAR GTA V.cfg");
-			if (inputFile.bad()) {
-				notificationOnLeft("Input file not found. Please re-install the plugin.");
-				continue;
-			}
-			inputFile >> ignore >> ignore >> ignore >> ignore >> ignore;
-			for (int i = 0; i < 6; i++) {
-				inputFile >> ignore >> ignore >> parameters[i];
-			}
-			inputFile >> ignore >> ignore >> range;
-			inputFile >> ignore >> ignore >> filename;
-			inputFile.close();
-			lidar(parameters[0], parameters[1], parameters[2], parameters[3], parameters[4], parameters[5], range, "LiDAR GTA V/" + filename + ".txt");*/
+		if (IsKeyJustUp(VK_F6))
+		{
+			notificationOnLeft("It may take a while for auto to find the road");
+			Ped playerId = PLAYER::PLAYER_PED_ID();
+			Vector3 playerPos = ENTITY::GET_ENTITY_COORDS(playerId, true);
+			car = VEHICLE::GET_CLOSEST_VEHICLE(playerPos.x, playerPos.y, playerPos.z, 10, 0, 70);
+			VEHICLE::START_VEHICLE_ALARM(car);
+			break;
 		}
 		WAIT(0);
+	}
+	WAIT(3000);
+	notificationOnLeft("Start Recording");
+	WAIT(3000);
+	// now we start to 
+	while (true)
+	{
+		if (VEHICLE::IS_VEHICLE_STOPPED(car)) continue;
+		std::string file_path = "data_set/point_data_" + std::to_string(count) + ".txt";
+		lidar(0.0, 360.0, -30.0, 10.0, 0.25, 0.25, 75, file_path);
+		++count;
+		WAIT(2000);
 	}
 }
