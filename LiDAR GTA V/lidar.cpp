@@ -173,14 +173,14 @@ void ScriptMain() {
 		while (flag)
 		{
 			float speed = ENTITY::GET_ENTITY_SPEED(car);
-			if (speed <= 5.0)
+			if (speed <= 2.5)
 			{
 				notificationOnLeft("speed: " + std::to_string(speed) +  " near zero");
 				WAIT(4000);
 				continue;
 			}
 			std::string file_path = "data_set/point_data_" + std::to_string(count) + ".txt";
-			lidar(0.0, 360.0, -23.4, 15.0, 0.3515625, 0.30, 100, file_path);
+			lidar(0.0, 360.0, -12.8, 12.8, 0.3515625, 0.20, 100, file_path);
 			++count;
 			SYSTEM::WAIT(3100);
 			clock_t t0, t1;
