@@ -145,35 +145,48 @@ void ScriptMain() {
 	Vehicle car;
 	unsigned int count(0); // initialize the number of point cloud data we will have 
 	// wait for the command(pressing F6) to start
+	
+	while (true) {
+		if (IsKeyJustUp(VK_F7))
+		{
+			Ped playerid = PLAYER::PLAYER_PED_ID();
+			Vector3 pos = ENTITY::GET_ENTITY_COORDS(playerid, true);
+			car = VEHICLE::CREATE_VEHICLE(3609690755, pos.x + 8, pos.y + 8, pos.z, ENTITY::GET_ENTITY_HEADING(playerid), false, false);
+			notificationOnLeft(std::to_string(ENTITY::GET_ENTITY_SPEED(car)) + "  " + std::to_string(car) + "  " + std::to_string((ENTITY::IS_ENTITY_A_VEHICLE(car))));
+			break;
+		}
+		WAIT(0);
+	}
+	
 	do
 	{
 		while (true) {
 			if (IsKeyJustUp(VK_F7))
 			{
-				Ped playerid = PLAYER::PLAYER_PED_ID();
-				Vector3 pos = ENTITY::GET_ENTITY_COORDS(playerid, true);
-				car = VEHICLE::GET_CLOSEST_VEHICLE(pos.x, pos.y, pos.z, 20, 0, 70);
-				VEHICLE::START_VEHICLE_ALARM(car);
-				notificationOnLeft(std::to_string(VEHICLE::_GET_VEHICLE_SPEED(car)) + "  " + std::to_string(car));
 				break;
 			}
 			WAIT(0);
 		}
-		notificationOnLeft("start recording");
+		notificationOnLeft("start recording with vehicleID " + std::to_string(car));
 		WAIT(1000);
 		bool flag(true);
 		while (flag)
 		{
-			if (VEHICLE::IS_VEHICLE_STOPPED_AT_TRAFFIC_LIGHTS(car))
+			float speed = ENTITY::GET_ENTITY_SPEED(car);
+			if (speed <= 5.0)
+			{
+				notificationOnLeft("speed: " + std::to_string(speed) +  " near zero");
+				WAIT(4000);
 				continue;
+			}
 			std::string file_path = "data_set/point_data_" + std::to_string(count) + ".txt";
 			lidar(0.0, 360.0, -23.4, 15.0, 0.3515625, 0.30, 100, file_path);
 			++count;
-			SYSTEM::WAIT(2100);
+			SYSTEM::WAIT(3100);
 			clock_t t0, t1;
 			t0 = clock();
 			t1 = clock();
-			while (t1 -t0 <= 2000)
+			while (t1 -t0 <= 3000)
 			{
 				if (IsKeyJustUp(VK_F7))
 				{
