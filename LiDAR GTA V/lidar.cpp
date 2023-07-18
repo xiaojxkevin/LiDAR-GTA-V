@@ -143,7 +143,7 @@ void lidar(double horiFovMin, double horiFovMax, double vertFovMin, double vertF
 
 void ScriptMain() {
 	Vehicle car;
-	unsigned int count(0); // initialize the number of point cloud data we will have 
+	unsigned int count(134); // initialize the number of point cloud data we will have 
 	// wait for the command(pressing F6) to start
 	
 	while (true) {
@@ -151,7 +151,13 @@ void ScriptMain() {
 		{
 			Ped playerid = PLAYER::PLAYER_PED_ID();
 			Vector3 pos = ENTITY::GET_ENTITY_COORDS(playerid, true);
-			car = VEHICLE::CREATE_VEHICLE(3609690755, pos.x + 8, pos.y + 8, pos.z, ENTITY::GET_ENTITY_HEADING(playerid), false, false);
+			car = VEHICLE::CREATE_VEHICLE(3609690755, pos.x + 3, pos.y + 3, pos.z, ENTITY::GET_ENTITY_HEADING(playerid), false, false);
+			if (car == 0)
+			{
+				notificationOnLeft("Failed to generate the car, please change to a wider area");
+				WAIT(1000);
+				continue;
+			}
 			notificationOnLeft(std::to_string(ENTITY::GET_ENTITY_SPEED(car)) + "  " + std::to_string(car) + "  " + std::to_string((ENTITY::IS_ENTITY_A_VEHICLE(car))));
 			break;
 		}
@@ -160,6 +166,7 @@ void ScriptMain() {
 	
 	do
 	{
+		notificationOnLeft("Press F7 to start recording");
 		while (true) {
 			if (IsKeyJustUp(VK_F7))
 			{
