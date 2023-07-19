@@ -143,7 +143,7 @@ void lidar(double horiFovMin, double horiFovMax, double vertFovMin, double vertF
 
 void ScriptMain() {
 	Vehicle car;
-	unsigned int count(134); // initialize the number of point cloud data we will have 
+	unsigned int count(0); // initialize the number of point cloud data we will have 
 	// wait for the command(pressing F6) to start
 	
 	while (true) {
@@ -183,17 +183,31 @@ void ScriptMain() {
 			if (speed <= 2.5)
 			{
 				notificationOnLeft("speed: " + std::to_string(speed) +  " near zero");
-				WAIT(4000);
+				SYSTEM::WAIT(1600);
+				clock_t t0, t1;
+				t0 = clock();
+				t1 = clock();
+				while (t1 - t0 <= 1500)
+				{
+					if (IsKeyJustUp(VK_F7))
+					{
+						flag = false;
+						break;
+					}
+					t1 = clock();
+					WAIT(0);
+				}
+				WAIT(1000);
 				continue;
 			}
 			std::string file_path = "data_set/point_data_" + std::to_string(count) + ".txt";
-			lidar(0.0, 360.0, -12.8, 12.8, 0.3515625, 0.20, 100, file_path);
+			lidar(0.0, 360.0, -25.0, 3.0, 0.17578125, 0.4375, 100, file_path);
 			++count;
-			SYSTEM::WAIT(3100);
+			SYSTEM::WAIT(1600);
 			clock_t t0, t1;
 			t0 = clock();
 			t1 = clock();
-			while (t1 -t0 <= 3000)
+			while (t1 -t0 <= 1500)
 			{
 				if (IsKeyJustUp(VK_F7))
 				{
@@ -204,7 +218,7 @@ void ScriptMain() {
 				WAIT(0);
 			}
 			/*notificationOnLeft("loop time " + std::to_string((double)(t1 - t0) / CLOCKS_PER_SEC));*/
-			WAIT(1000);
+			WAIT(500);
 		}
 		notificationOnLeft("Stopped recording");
 		WAIT(0);
