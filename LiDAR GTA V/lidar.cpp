@@ -9,7 +9,9 @@
 
 
 #pragma warning(disable : 4244 4305) // double <-> float conversions
+
 constexpr unsigned int NUMBER_FRAME = 1000;
+constexpr size_t FILE_FORMAT = 4;
 
 void notificationOnLeft(std::string notificationText) {
 	UI::_SET_NOTIFICATION_TEXT_ENTRY("CELL_EMAIL_BCON");
@@ -144,7 +146,7 @@ void lidar(double horiFovMin, double horiFovMax, double vertFovMin, double vertF
 void ScriptMain() {
 	Vehicle car;
 	unsigned int count(0); // initialize the number of point cloud data we will have 
-	// wait for the command(pressing F6) to start
+	// wait for the command(pressing F7) to start
 	
 	while (true) {
 		if (IsKeyJustUp(VK_F7))
@@ -158,7 +160,7 @@ void ScriptMain() {
 				WAIT(1000);
 				continue;
 			}
-			notificationOnLeft(std::to_string(ENTITY::GET_ENTITY_SPEED(car)) + "  " + std::to_string(car) + "  " + std::to_string((ENTITY::IS_ENTITY_A_VEHICLE(car))));
+			notificationOnLeft("Vehicle with ID " + std::to_string(car) + " is created");
 			break;
 		}
 		WAIT(0);
@@ -200,14 +202,18 @@ void ScriptMain() {
 				WAIT(1000);
 				continue;
 			}
-			std::string file_path = "data_set/point_data_" + std::to_string(count) + ".txt";
+			std::string num = std::to_string(count);
+			// Please make sure that the value of COUNT	must not being larger than 4
+			size_t precision = FILE_FORMAT - num.size();
+			num.insert(0, precision, '0');
+			std::string file_path = "data_set/" + num + ".txt";
 			lidar(0.0, 360.0, -25.0, 3.0, 0.17578125, 0.4375, 100, file_path);
 			++count;
-			SYSTEM::WAIT(1600);
+			SYSTEM::WAIT(1100);
 			clock_t t0, t1;
 			t0 = clock();
 			t1 = clock();
-			while (t1 -t0 <= 1500)
+			while (t1 -t0 <= 1000)
 			{
 				if (IsKeyJustUp(VK_F7))
 				{
@@ -222,5 +228,11 @@ void ScriptMain() {
 		}
 		notificationOnLeft("Stopped recording");
 		WAIT(0);
-	} while (true);
+	} while (count < NUMBER_FRAME);
+
+	while (true)
+	{
+		notificationOnLeft("We have recorded 1000 frames, please log out of the game");
+		WAIT(1000);
+	}
 }
