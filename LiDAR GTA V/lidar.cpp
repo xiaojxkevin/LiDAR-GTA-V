@@ -146,10 +146,10 @@ void lidar(double horiFovMin, double horiFovMax, double vertFovMin, double vertF
 void ScriptMain() {
 	Vehicle car;
 	unsigned int count(0); // initialize the number of point cloud data we will have 
-	// wait for the command(pressing F7) to start
+	// wait for the command(pressing F6) to start
 	
 	while (true) {
-		if (IsKeyJustUp(VK_F7))
+		if (IsKeyJustUp(VK_F6))
 		{
 			Ped playerid = PLAYER::PLAYER_PED_ID();
 			Vector3 pos = ENTITY::GET_ENTITY_COORDS(playerid, true);
@@ -168,9 +168,9 @@ void ScriptMain() {
 	
 	do
 	{
-		notificationOnLeft("Press F7 to start recording");
+		notificationOnLeft("Press F6 to start recording");
 		while (true) {
-			if (IsKeyJustUp(VK_F7))
+			if (IsKeyJustUp(VK_F6))
 			{
 				break;
 			}
@@ -191,7 +191,7 @@ void ScriptMain() {
 				t1 = clock();
 				while (t1 - t0 <= 1500)
 				{
-					if (IsKeyJustUp(VK_F7))
+					if (IsKeyJustUp(VK_F6))
 					{
 						flag = false;
 						break;
@@ -215,7 +215,7 @@ void ScriptMain() {
 			t1 = clock();
 			while (t1 -t0 <= 1000)
 			{
-				if (IsKeyJustUp(VK_F7))
+				if (IsKeyJustUp(VK_F6))
 				{
 					flag = false;
 					break;
