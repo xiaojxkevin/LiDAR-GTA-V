@@ -184,7 +184,7 @@ void ScriptMain() {
 			float speed = ENTITY::GET_ENTITY_SPEED(car);
 			if (speed <= 2.5)
 			{
-				notificationOnLeft("speed: " + std::to_string(speed) +  " near zero");
+				notificationOnLeft("speed: " + std::to_string(speed) +  " too slow, do not record");
 				SYSTEM::WAIT(1600);
 				clock_t t0, t1;
 				t0 = clock();
@@ -233,6 +233,6 @@ void ScriptMain() {
 	while (true)
 	{
 		notificationOnLeft("We have recorded 1000 frames, please log out of the game");
-		WAIT(1000);
+		WAIT(3000);
 	}
 }
