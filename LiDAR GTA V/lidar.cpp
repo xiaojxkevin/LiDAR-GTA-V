@@ -13,8 +13,9 @@
 constexpr unsigned int NUMBER_FRAME = 1000;
 constexpr size_t FILE_FORMAT = 4;
 constexpr unsigned int FREEZE_SIZE = 2048;
-constexpr int TEST_STEP = 1100;
+constexpr int TEST_STEP = 800;
 constexpr int TRAIN_STEP = 2100;
+bool IS_TEST = true;
 
 void notificationOnLeft(std::string notificationText) {
 	UI::_SET_NOTIFICATION_TEXT_ENTRY("CELL_EMAIL_BCON");
@@ -93,16 +94,13 @@ ray angleOffsetRaycast(Vector3 source, Vector3 cameraRotation, double angleOffse
 	return raycast(source, direction, range, -1);
 }
 
-void lidar(double horiFovMin, double horiFovMax, double vertFovMin, double vertFovMax, double horiStep, double vertStep, int range, std::string filePath) {
+void lidar(double horiFovMin, double horiFovMax, double vertFovMin, double vertFovMax, double horiStep, double vertStep, int range, std::string filePath, Cam camera) {
 	std::ofstream data_file;
 	data_file.open(filePath);
-	// To stop the game
-	GAMEPLAY::SET_GAME_PAUSED(true);
 	TIME::PAUSE_CLOCK(true);
-
-	// double vertexCount = (horiFovMax - horiFovMin) * (1 / horiStep) * (vertFovMax - vertFovMin) * (1 / vertStep);
-	Vector3 rot = CAM::GET_GAMEPLAY_CAM_ROT(2);
-	Vector3 coord = CAM::GET_GAMEPLAY_CAM_COORD();
+	GAMEPLAY::SET_GAME_PAUSED(true);
+	Vector3 rot = CAM::GET_CAM_ROT(camera, 2);
+	Vector3 coord = CAM::GET_CAM_COORD(camera);
 	std::string cameraCenter = "cameraCenter " + std::to_string(coord.x) + " " + std::to_string(coord.y) + " " + std::to_string(coord.z) + "\n";
 	std::string camerRot = "camerRotation " + std::to_string(rot.x) + " " + std::to_string(rot.y) + " " + std::to_string(rot.z) + "\n";
 	data_file << cameraCenter;
@@ -165,24 +163,26 @@ inline void stop() {
 
 void ScriptMain() {
 	Vehicle car;
-	unsigned int count(0); // initialize the number of point cloud data we will have 
+	unsigned int count(0); 
 	int time_step(0);
-	// wait for the command(pressing F6) to start
+	Cam camera(0);
+	
 	while (true)
 	{
 		notificationOnLeft("Press F5 if for TEST else F6 for TRAINING");
 		if (IsKeyJustUp(VK_F5))
 		{
 			time_step = TEST_STEP;
-			notificationOnLeft("Begin sampling TEST data set");
 			WAIT(1000);
+			notificationOnLeft("Begin sampling TEST data set");
 			break;
 		}
 		else if (IsKeyJustUp(VK_F6))
 		{
 			time_step = TRAIN_STEP;
-			notificationOnLeft("Begin sampling TRAINING data set");
+			IS_TEST = false;
 			WAIT(1000);
+			notificationOnLeft("Begin sampling TRAINING data set");
 			break;
 		}
 		WAIT(0);
@@ -194,19 +194,29 @@ void ScriptMain() {
 		{
 			Ped playerid = PLAYER::PLAYER_PED_ID();
 			Vector3 pos = ENTITY::GET_ENTITY_COORDS(playerid, true);
-			car = VEHICLE::CREATE_VEHICLE(3609690755, pos.x + 2.1, pos.y + 2.1, pos.z, ENTITY::GET_ENTITY_HEADING(playerid), false, false);
+			car = VEHICLE::CREATE_VEHICLE(3609690755, pos.x + 2, pos.y + 2, pos.z, ENTITY::GET_ENTITY_HEADING(playerid), false, false);
 			if (car == 0)
 			{
-				notificationOnLeft("Failed to generate the car, please change to a wider area");
 				WAIT(1000);
+				notificationOnLeft("Failed to generate the car, please change to a wider area");
 				continue;
 			}
-			notificationOnLeft("Vehicle with ID " + std::to_string(car) + " is created");
 			WAIT(1000);
+			notificationOnLeft("Vehicle with ID " + std::to_string(car) + " is created");
 			break;
 		}
 		WAIT(0);
 	}
+
+	Vector3 coord = ENTITY::GET_ENTITY_COORDS(car, true);
+	Vector3 car_rot = ENTITY::GET_ENTITY_ROTATION(car, 2);
+	camera = CAM::CREATE_CAM_WITH_PARAMS("DEFAULT_SCRIPTED_CAMERA", coord.x, coord.y, coord.z, car_rot.x, car_rot.y, car_rot.z, 90.0, true, 2);
+	CAM::SET_CAM_ACTIVE(camera, true);
+	CAM::RENDER_SCRIPT_CAMS(true, false, 3000, true, false);
+	CAM::ATTACH_CAM_TO_ENTITY(camera, car, 0, 0, 1.8, true);
+	CAM::SET_FOLLOW_VEHICLE_CAM_VIEW_MODE(1);
+	notificationOnLeft("camera with ID " + std::to_string(camera) + " is created");
+	WAIT(1000);
 	
 	do
 	{
@@ -216,24 +226,25 @@ void ScriptMain() {
 			{
 				break;
 			}
-			WAIT(0);
+			car_rot = ENTITY::GET_ENTITY_ROTATION(car, 2);
+			CAM::SET_CAM_ROT(camera, car_rot.x, car_rot.y, car_rot.z, 2);
+			WAIT(10);
 		}
 		notificationOnLeft("start recording with vehicleID " + std::to_string(car));
 		WAIT(1000);
 		bool flag(true);
 		while (flag)
 		{
-			stop();
+			if (IS_TEST) stop();
 			float speed = ENTITY::GET_ENTITY_SPEED(car);
 			if (speed <= 2.5)
 			{
 				notificationOnLeft("speed: " + std::to_string(speed) +  " too slow, do not record");
-				
-				SYSTEM::WAIT(time_step);
+				SYSTEM::WAIT(1100);
 				clock_t t0, t1;
 				t0 = clock();
 				t1 = clock();
-				while (t1 - t0 <= time_step - 100)
+				while (t1 - t0 <= 1000)
 				{
 					if (IsKeyJustUp(VK_F6))
 					{
@@ -243,16 +254,20 @@ void ScriptMain() {
 					t1 = clock();
 					WAIT(0);
 				}
+				car_rot = ENTITY::GET_ENTITY_ROTATION(car, 2);
+				CAM::SET_CAM_ROT(camera, car_rot.x, car_rot.y, car_rot.z, 2);
 				WAIT(0);
 				continue;
 			}
-			stop();
+			if (IS_TEST) stop();
+			car_rot = ENTITY::GET_ENTITY_ROTATION(car, 2);
+			CAM::SET_CAM_ROT(camera, car_rot.x, car_rot.y, car_rot.z, 2);
 			std::string num = std::to_string(count);
 			// Please make sure that the value of COUNT	must not being larger than 4
 			size_t precision = FILE_FORMAT - num.size();
 			num.insert(0, precision, '0');
 			std::string file_path = "data_set/" + num + ".txt";
-			lidar(0.0, 360.0, -25.0, 3.0, 0.17578125, 0.4375, 100, file_path);
+			lidar(0.0, 360.0, -14.0, 14.0, 0.17578125, 0.4375, 100, file_path, camera);
 			++count;
 			SYSTEM::WAIT(time_step);
 			clock_t t0, t1;
@@ -269,7 +284,9 @@ void ScriptMain() {
 				WAIT(0);
 			}
 			/*notificationOnLeft("loop time " + std::to_string((double)(t1 - t0) / CLOCKS_PER_SEC));*/
-			stop();
+			if (IS_TEST) stop();
+			car_rot = ENTITY::GET_ENTITY_ROTATION(car, 2);
+			CAM::SET_CAM_ROT(camera, car_rot.x, car_rot.y, car_rot.z, 2);
 			WAIT(0);
 		}
 		notificationOnLeft("Stopped recording");
