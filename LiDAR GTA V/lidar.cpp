@@ -16,6 +16,8 @@ constexpr unsigned int FREEZE_SIZE = 2048;
 constexpr int TEST_STEP = 800;
 constexpr int TRAIN_STEP = 2100;
 bool IS_TEST = true;
+constexpr float SPEED_BIAS = 2.5;
+constexpr float SCRIPED_CAM_HEIGHT = 1.5;
 
 void notificationOnLeft(std::string notificationText) {
 	UI::_SET_NOTIFICATION_TEXT_ENTRY("CELL_EMAIL_BCON");
@@ -213,7 +215,7 @@ void ScriptMain() {
 	camera = CAM::CREATE_CAM_WITH_PARAMS("DEFAULT_SCRIPTED_CAMERA", coord.x, coord.y, coord.z, car_rot.x, car_rot.y, car_rot.z, 90.0, true, 2);
 	CAM::SET_CAM_ACTIVE(camera, true);
 	CAM::RENDER_SCRIPT_CAMS(true, false, 3000, true, false);
-	CAM::ATTACH_CAM_TO_ENTITY(camera, car, 0, 0, 1.8, true);
+	CAM::ATTACH_CAM_TO_ENTITY(camera, car, 0, 0, SCRIPED_CAM_HEIGHT, true);
 	CAM::SET_FOLLOW_VEHICLE_CAM_VIEW_MODE(1);
 	notificationOnLeft("camera with ID " + std::to_string(camera) + " is created");
 	WAIT(1000);
@@ -237,7 +239,7 @@ void ScriptMain() {
 		{
 			if (IS_TEST) stop();
 			float speed = ENTITY::GET_ENTITY_SPEED(car);
-			if (speed <= 2.5)
+			if (speed <= SPEED_BIAS)
 			{
 				notificationOnLeft("speed: " + std::to_string(speed) +  " too slow, do not record");
 				SYSTEM::WAIT(1100);
@@ -280,10 +282,11 @@ void ScriptMain() {
 					flag = false;
 					break;
 				}
+				car_rot = ENTITY::GET_ENTITY_ROTATION(car, 2);
+				CAM::SET_CAM_ROT(camera, car_rot.x, car_rot.y, car_rot.z, 2);
 				t1 = clock();
 				WAIT(0);
 			}
-			/*notificationOnLeft("loop time " + std::to_string((double)(t1 - t0) / CLOCKS_PER_SEC));*/
 			if (IS_TEST) stop();
 			car_rot = ENTITY::GET_ENTITY_ROTATION(car, 2);
 			CAM::SET_CAM_ROT(camera, car_rot.x, car_rot.y, car_rot.z, 2);
