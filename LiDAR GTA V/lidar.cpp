@@ -181,7 +181,7 @@ void ScriptMain() {
 		else if (IsKeyJustUp(VK_F6))
 		{
 			time_step = TRAIN_STEP;
-			notificationOnLeft("Begin sampling TEST data set");
+			notificationOnLeft("Begin sampling TRAINING data set");
 			WAIT(1000);
 			break;
 		}
