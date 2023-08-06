@@ -12,6 +12,9 @@
 
 constexpr unsigned int NUMBER_FRAME = 1000;
 constexpr size_t FILE_FORMAT = 4;
+constexpr unsigned int FREEZE_SIZE = 2048;
+constexpr int TEST_STEP = 1100;
+constexpr int TRAIN_STEP = 2100;
 
 void notificationOnLeft(std::string notificationText) {
 	UI::_SET_NOTIFICATION_TEXT_ENTRY("CELL_EMAIL_BCON");
@@ -143,17 +146,55 @@ void lidar(double horiFovMin, double horiFovMax, double vertFovMin, double vertF
 	notificationOnLeft(notice);
 }
 
+inline void stop() {
+	int vehicles[FREEZE_SIZE];
+	int vehicleCount = worldGetAllVehicles(vehicles, FREEZE_SIZE);
+	for (int x = 0; x < vehicleCount; x++)
+	{
+		if (vehicles[x] != PED::GET_VEHICLE_PED_IS_USING(PLAYER::PLAYER_PED_ID()))
+		{
+			ENTITY::FREEZE_ENTITY_POSITION(vehicles[x], true);
+		}
+		else
+		{
+			WAIT(3);
+			ENTITY::FREEZE_ENTITY_POSITION(vehicles[x], false);
+		}
+	}
+}
+
 void ScriptMain() {
 	Vehicle car;
 	unsigned int count(0); // initialize the number of point cloud data we will have 
+	int time_step(0);
 	// wait for the command(pressing F6) to start
-	
+	while (true)
+	{
+		notificationOnLeft("Press F5 if for TEST else F6 for TRAINING");
+		if (IsKeyJustUp(VK_F5))
+		{
+			time_step = TEST_STEP;
+			notificationOnLeft("Begin sampling TEST data set");
+			WAIT(1000);
+			break;
+		}
+		else if (IsKeyJustUp(VK_F6))
+		{
+			time_step = TRAIN_STEP;
+			notificationOnLeft("Begin sampling TEST data set");
+			WAIT(1000);
+			break;
+		}
+		WAIT(0);
+	}
+
 	while (true) {
+		notificationOnLeft("Press F6 to generate car");
 		if (IsKeyJustUp(VK_F6))
 		{
 			Ped playerid = PLAYER::PLAYER_PED_ID();
 			Vector3 pos = ENTITY::GET_ENTITY_COORDS(playerid, true);
-			car = VEHICLE::CREATE_VEHICLE(3609690755, pos.x + 3, pos.y + 3, pos.z, ENTITY::GET_ENTITY_HEADING(playerid), false, false);
+			car = VEHICLE::CREATE_VEHICLE(3609690755, pos.x + 2.1, pos.y + 2.1, pos.z, ENTITY::GET_ENTITY_HEADING(playerid), false, false);
 			if (car == 0)
 			{
 				notificationOnLeft("Failed to generate the car, please change to a wider area");
@@ -161,6 +202,7 @@ void ScriptMain() {
 				continue;
 			}
 			notificationOnLeft("Vehicle with ID " + std::to_string(car) + " is created");
+			WAIT(1000);
 			break;
 		}
 		WAIT(0);
@@ -181,15 +223,17 @@ void ScriptMain() {
 		bool flag(true);
 		while (flag)
 		{
+			stop();
 			float speed = ENTITY::GET_ENTITY_SPEED(car);
 			if (speed <= 2.5)
 			{
 				notificationOnLeft("speed: " + std::to_string(speed) +  " too slow, do not record");
-				SYSTEM::WAIT(1600);
+				
+				SYSTEM::WAIT(time_step);
 				clock_t t0, t1;
 				t0 = clock();
 				t1 = clock();
-				while (t1 - t0 <= 1500)
+				while (t1 - t0 <= time_step - 100)
 				{
 					if (IsKeyJustUp(VK_F6))
 					{
@@ -199,9 +243,10 @@ void ScriptMain() {
 					t1 = clock();
 					WAIT(0);
 				}
-				WAIT(1000);
+				WAIT(0);
 				continue;
 			}
+			stop();
 			std::string num = std::to_string(count);
 			// Please make sure that the value of COUNT	must not being larger than 4
 			size_t precision = FILE_FORMAT - num.size();
@@ -209,11 +254,11 @@ void ScriptMain() {
 			std::string file_path = "data_set/" + num + ".txt";
 			lidar(0.0, 360.0, -25.0, 3.0, 0.17578125, 0.4375, 100, file_path);
 			++count;
-			SYSTEM::WAIT(1100);
+			SYSTEM::WAIT(time_step);
 			clock_t t0, t1;
 			t0 = clock();
 			t1 = clock();
-			while (t1 -t0 <= 1000)
+			while (t1 -t0 <= time_step - 100)
 			{
 				if (IsKeyJustUp(VK_F6))
 				{
@@ -224,7 +269,8 @@ void ScriptMain() {
 				WAIT(0);
 			}
 			/*notificationOnLeft("loop time " + std::to_string((double)(t1 - t0) / CLOCKS_PER_SEC));*/
-			WAIT(500);
+			stop();
+			WAIT(0);
 		}
 		notificationOnLeft("Stopped recording");
 		WAIT(0);
@@ -232,7 +278,7 @@ void ScriptMain() {
 
 	while (true)
 	{
-		notificationOnLeft("We have recorded 1000 frames, please log out of the game");
+		notificationOnLeft("We have recorded " + std::to_string(NUMBER_FRAME) + " frames, please log out of the game");
 		WAIT(3000);
 	}
 }
