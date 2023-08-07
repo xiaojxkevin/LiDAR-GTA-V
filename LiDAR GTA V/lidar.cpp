@@ -10,13 +10,13 @@
 
 #pragma warning(disable : 4244 4305) // double <-> float conversions
 
+// Set up all constants
 constexpr unsigned int NUMBER_FRAME = 1000;
 constexpr size_t FILE_FORMAT = 4;
 constexpr unsigned int FREEZE_SIZE = 2048;
 constexpr int TEST_STEP = 800;
 constexpr int TRAIN_STEP = 2100;
-bool IS_TEST = true;
-constexpr float SPEED_BIAS = 2.5;
+constexpr float SPEED_BIAS = 1.5;
 constexpr float SCRIPED_CAM_HEIGHT = 1.5;
 
 void notificationOnLeft(std::string notificationText) {
@@ -163,134 +163,199 @@ inline void stop() {
 	}
 }
 
-void ScriptMain() {
-	Vehicle car;
-	unsigned int count(0); 
-	int time_step(0);
-	Cam camera(0);
-	
+inline void mode(int* time_step, bool* is_test) {
 	while (true)
 	{
 		notificationOnLeft("Press F5 if for TEST else F6 for TRAINING");
 		if (IsKeyJustUp(VK_F5))
 		{
-			time_step = TEST_STEP;
+			*time_step = TEST_STEP;
 			WAIT(1000);
-			notificationOnLeft("Begin sampling TEST data set");
+			notificationOnLeft("Begin sampling TEST data");
 			break;
 		}
 		else if (IsKeyJustUp(VK_F6))
 		{
-			time_step = TRAIN_STEP;
-			IS_TEST = false;
+			*time_step = TRAIN_STEP;
+			*is_test = false;
 			WAIT(1000);
-			notificationOnLeft("Begin sampling TRAINING data set");
+			notificationOnLeft("Begin sampling TRAINING data");
 			break;
 		}
 		WAIT(0);
 	}
+}
 
+inline void create_car(Vehicle* car) {
+	if (car == NULL) return;
+	notificationOnLeft("Press F6 to generate car");
 	while (true) {
-		notificationOnLeft("Press F6 to generate car");
 		if (IsKeyJustUp(VK_F6))
 		{
 			Ped playerid = PLAYER::PLAYER_PED_ID();
 			Vector3 pos = ENTITY::GET_ENTITY_COORDS(playerid, true);
-			car = VEHICLE::CREATE_VEHICLE(3609690755, pos.x + 2, pos.y + 2, pos.z, ENTITY::GET_ENTITY_HEADING(playerid), false, false);
-			if (car == 0)
+			*car = VEHICLE::CREATE_VEHICLE(3609690755, pos.x, pos.y, pos.z, ENTITY::GET_ENTITY_HEADING(playerid), false, false);
+			if (*car == 0)
 			{
-				WAIT(1000);
 				notificationOnLeft("Failed to generate the car, please change to a wider area");
+				WAIT(1000);
 				continue;
 			}
+			notificationOnLeft("Vehicle with ID " + std::to_string(*car) + " is created");
 			WAIT(1000);
-			notificationOnLeft("Vehicle with ID " + std::to_string(car) + " is created");
 			break;
 		}
 		WAIT(0);
 	}
+}
 
+inline Cam create_cam(Vehicle car) {
 	Vector3 coord = ENTITY::GET_ENTITY_COORDS(car, true);
 	Vector3 car_rot = ENTITY::GET_ENTITY_ROTATION(car, 2);
-	camera = CAM::CREATE_CAM_WITH_PARAMS("DEFAULT_SCRIPTED_CAMERA", coord.x, coord.y, coord.z, car_rot.x, car_rot.y, car_rot.z, 90.0, true, 2);
+	Cam camera = CAM::CREATE_CAM_WITH_PARAMS("DEFAULT_SCRIPTED_CAMERA", coord.x, coord.y, coord.z, car_rot.x, car_rot.y, car_rot.z, 90.0, true, 2);
 	CAM::SET_CAM_ACTIVE(camera, true);
 	CAM::RENDER_SCRIPT_CAMS(true, false, 3000, true, false);
 	CAM::ATTACH_CAM_TO_ENTITY(camera, car, 0, 0, SCRIPED_CAM_HEIGHT, true);
 	CAM::SET_FOLLOW_VEHICLE_CAM_VIEW_MODE(1);
 	notificationOnLeft("camera with ID " + std::to_string(camera) + " is created");
-	WAIT(1000);
-	
-	do
+	return camera;
+}
+
+inline void adjust_cam_rot(Vehicle car, Cam camera) {
+	Vector3 car_rot = ENTITY::GET_ENTITY_ROTATION(car, 2);
+	CAM::SET_CAM_ROT(camera, car_rot.x, car_rot.y, car_rot.z, 2);
+}
+
+inline void create_pcl(unsigned int* count, Cam camera) {
+	std::string num = std::to_string(*count);
+	size_t precision = FILE_FORMAT - num.size();
+	num.insert(0, precision, '0');
+	std::string file_path = "data_set/" + num + ".txt";
+	lidar(0.0, 360.0, -14.0, 14.0, 0.17578125, 0.4375, 100, file_path, camera);
+	++(*count);
+}
+
+inline void record_mode(Vehicle car, Cam* camera, unsigned int* count) {
+	notificationOnLeft("F5 to record only one frame; F6 to start recording; F7 to create car; F8 to create motocycles");
+	while (true) {
+		if (*camera != -1) adjust_cam_rot(car, *camera);
+		if (IsKeyJustUp(VK_F6))
+		{
+			break;
+		}
+		else if (IsKeyJustUp(VK_F5))
+		{
+			create_pcl(count, *camera);
+		}
+		else if (IsKeyJustUp(VK_F7))
+		{
+			Ped playerid = PLAYER::PLAYER_PED_ID();
+			Vector3 pos = ENTITY::GET_ENTITY_COORDS(playerid, true);
+			Vehicle v = VEHICLE::CREATE_VEHICLE(2844316578, pos.x + 3, pos.y + 3, pos.z, ENTITY::GET_ENTITY_HEADING(playerid), false, false);
+			if (v == 0)
+			{
+				notificationOnLeft("Failed to generate the car, please change to a wider area");
+				WAIT(1000);
+			}
+			notificationOnLeft("Car is created");
+		}
+		else if (IsKeyJustUp(VK_F8))
+		{
+			Ped playerid = PLAYER::PLAYER_PED_ID();
+			Vector3 pos = ENTITY::GET_ENTITY_COORDS(playerid, true);
+			Vehicle v = VEHICLE::CREATE_VEHICLE(1672195559, pos.x + 3, pos.y + 3, pos.z, ENTITY::GET_ENTITY_HEADING(playerid), false, false);
+			if (v == 0)
+			{
+				notificationOnLeft("Failed to generate the motocycle, please change to a wider area");
+				WAIT(1000);
+			}
+			notificationOnLeft("Motocycle is created");
+		}
+		WAIT(10);
+	}
+}
+
+inline bool check_car_speed(Vehicle car, bool* flag, Cam* camera) {
+	float speed = ENTITY::GET_ENTITY_SPEED(car);
+	if (speed <= SPEED_BIAS)
 	{
-		notificationOnLeft("Press F6 to start recording");
-		while (true) {
+		notificationOnLeft("speed: " + std::to_string(speed) + " too slow, do not record");
+		SYSTEM::WAIT(1100);
+		clock_t t0, t1;
+		t0 = clock();
+		t1 = clock();
+		while (t1 - t0 <= 1000)
+		{
 			if (IsKeyJustUp(VK_F6))
 			{
+				*flag = false;
 				break;
 			}
-			car_rot = ENTITY::GET_ENTITY_ROTATION(car, 2);
-			CAM::SET_CAM_ROT(camera, car_rot.x, car_rot.y, car_rot.z, 2);
-			WAIT(10);
+			t1 = clock();
+			WAIT(0);
 		}
+		adjust_cam_rot(car, *camera);
+		WAIT(0);
+		return false;
+	}
+	return true;
+}
+
+inline void recording_break(int time_step, bool* flag, Vehicle car, Cam* camera, bool is_test) {
+	SYSTEM::WAIT(time_step);
+	clock_t t0, t1;
+	t0 = clock();
+	t1 = clock();
+	while (t1 - t0 <= time_step - 100)
+	{
+		if (IsKeyJustUp(VK_F6))
+		{
+			*flag = false;
+			break;
+		}
+		adjust_cam_rot(car, *camera);
+		t1 = clock();
+		WAIT(0);
+	}
+	if (is_test) stop();
+	adjust_cam_rot(car, *camera);
+	WAIT(0);
+}
+
+void ScriptMain() {
+	// This is the main function of the hole project
+
+	// Initialization
+	Vehicle car(0);
+	unsigned int count(0); 
+	int time_step(0);
+	Cam camera(-1);
+	bool is_test = true;
+
+	// To decide if to sample TEST data or TRAIN data
+	mode(&time_step, &is_test);
+	
+	// Create the vehicle that we will use
+	create_car(&car);
+
+	camera = create_cam(car);
+
+	WAIT(1000);
+	
+	// The main loop
+	do
+	{
+		record_mode(car, &camera, &count);
 		notificationOnLeft("start recording with vehicleID " + std::to_string(car));
 		WAIT(1000);
 		bool flag(true);
 		while (flag)
 		{
-			if (IS_TEST) stop();
-			float speed = ENTITY::GET_ENTITY_SPEED(car);
-			if (speed <= SPEED_BIAS)
-			{
-				notificationOnLeft("speed: " + std::to_string(speed) +  " too slow, do not record");
-				SYSTEM::WAIT(1100);
-				clock_t t0, t1;
-				t0 = clock();
-				t1 = clock();
-				while (t1 - t0 <= 1000)
-				{
-					if (IsKeyJustUp(VK_F6))
-					{
-						flag = false;
-						break;
-					}
-					t1 = clock();
-					WAIT(0);
-				}
-				car_rot = ENTITY::GET_ENTITY_ROTATION(car, 2);
-				CAM::SET_CAM_ROT(camera, car_rot.x, car_rot.y, car_rot.z, 2);
-				WAIT(0);
-				continue;
-			}
-			if (IS_TEST) stop();
-			car_rot = ENTITY::GET_ENTITY_ROTATION(car, 2);
-			CAM::SET_CAM_ROT(camera, car_rot.x, car_rot.y, car_rot.z, 2);
-			std::string num = std::to_string(count);
-			// Please make sure that the value of COUNT	must not being larger than 4
-			size_t precision = FILE_FORMAT - num.size();
-			num.insert(0, precision, '0');
-			std::string file_path = "data_set/" + num + ".txt";
-			lidar(0.0, 360.0, -14.0, 14.0, 0.17578125, 0.4375, 100, file_path, camera);
-			++count;
-			SYSTEM::WAIT(time_step);
-			clock_t t0, t1;
-			t0 = clock();
-			t1 = clock();
-			while (t1 -t0 <= time_step - 100)
-			{
-				if (IsKeyJustUp(VK_F6))
-				{
-					flag = false;
-					break;
-				}
-				car_rot = ENTITY::GET_ENTITY_ROTATION(car, 2);
-				CAM::SET_CAM_ROT(camera, car_rot.x, car_rot.y, car_rot.z, 2);
-				t1 = clock();
-				WAIT(0);
-			}
-			if (IS_TEST) stop();
-			car_rot = ENTITY::GET_ENTITY_ROTATION(car, 2);
-			CAM::SET_CAM_ROT(camera, car_rot.x, car_rot.y, car_rot.z, 2);
-			WAIT(0);
+			if (!check_car_speed(car, &flag, &camera)) continue;
+			if (is_test) stop();
+			adjust_cam_rot(car, camera);
+			create_pcl(&count, camera);
+			recording_break(time_step, &flag, car, &camera, is_test);
 		}
 		notificationOnLeft("Stopped recording");
 		WAIT(0);
