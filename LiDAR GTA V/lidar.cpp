@@ -166,8 +166,8 @@ inline void stop() {
 inline void mode(int* time_step, bool* is_test) {
 	while (true)
 	{
-		notificationOnLeft("Press F5 if for TEST else F6 for TRAINING");
-		if (IsKeyJustUp(VK_F5))
+		notificationOnLeft("Press F6 if for TRAINING else F7 for TEST");
+		if (IsKeyJustUp(VK_F7))
 		{
 			*time_step = TEST_STEP;
 			WAIT(1000);
@@ -235,41 +235,26 @@ inline void create_pcl(unsigned int* count, Cam camera) {
 	++(*count);
 }
 
-inline void record_mode(Vehicle car, Cam* camera, unsigned int* count) {
-	notificationOnLeft("F5 to record only one frame; F6 to start recording; F7 to create car; F8 to create motocycles");
+inline void record_mode(Vehicle car, Cam* camera, unsigned int* count, bool is_test) {
+	notificationOnLeft("F6 to start recording; F7 to record only one frame; F8 to gameplay vision; F9 to sampling vision");
 	while (true) {
 		if (*camera != -1) adjust_cam_rot(car, *camera);
 		if (IsKeyJustUp(VK_F6))
 		{
 			break;
 		}
-		else if (IsKeyJustUp(VK_F5))
-		{
-			create_pcl(count, *camera);
-		}
 		else if (IsKeyJustUp(VK_F7))
 		{
-			Ped playerid = PLAYER::PLAYER_PED_ID();
-			Vector3 pos = ENTITY::GET_ENTITY_COORDS(playerid, true);
-			Vehicle v = VEHICLE::CREATE_VEHICLE(2844316578, pos.x + 3, pos.y + 3, pos.z, ENTITY::GET_ENTITY_HEADING(playerid), false, false);
-			if (v == 0)
-			{
-				notificationOnLeft("Failed to generate the car, please change to a wider area");
-				WAIT(1000);
-			}
-			notificationOnLeft("Car is created");
+			if (is_test) stop();
+			create_pcl(count, *camera);
 		}
 		else if (IsKeyJustUp(VK_F8))
 		{
-			Ped playerid = PLAYER::PLAYER_PED_ID();
-			Vector3 pos = ENTITY::GET_ENTITY_COORDS(playerid, true);
-			Vehicle v = VEHICLE::CREATE_VEHICLE(1672195559, pos.x + 3, pos.y + 3, pos.z, ENTITY::GET_ENTITY_HEADING(playerid), false, false);
-			if (v == 0)
-			{
-				notificationOnLeft("Failed to generate the motocycle, please change to a wider area");
-				WAIT(1000);
-			}
-			notificationOnLeft("Motocycle is created");
+			CAM::RENDER_SCRIPT_CAMS(false, true, 3000, true, false);
+		}
+		else if (IsKeyJustUp(VK_F9))
+		{
+			CAM::RENDER_SCRIPT_CAMS(true, false, 3000, true, false);
 		}
 		WAIT(10);
 	}
@@ -317,7 +302,6 @@ inline void recording_break(int time_step, bool* flag, Vehicle car, Cam* camera,
 		t1 = clock();
 		WAIT(0);
 	}
-	if (is_test) stop();
 	adjust_cam_rot(car, *camera);
 	WAIT(0);
 }
@@ -338,6 +322,7 @@ void ScriptMain() {
 	// Create the vehicle that we will use
 	create_car(&car);
 
+	// Create the sampling camera
 	camera = create_cam(car);
 
 	WAIT(1000);
@@ -345,9 +330,9 @@ void ScriptMain() {
 	// The main loop
 	do
 	{
-		record_mode(car, &camera, &count);
+		record_mode(car, &camera, &count, is_test);
 		notificationOnLeft("start recording with vehicleID " + std::to_string(car));
-		WAIT(1000);
+		WAIT(500);
 		bool flag(true);
 		while (flag)
 		{
