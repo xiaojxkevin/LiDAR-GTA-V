@@ -14,10 +14,8 @@
 constexpr unsigned int NUMBER_FRAME = 1000;
 constexpr size_t FILE_FORMAT = 4;
 constexpr unsigned int FREEZE_SIZE = 2048;
-constexpr int TEST_STEP = 800;
-constexpr int TRAIN_STEP = 2100;
-constexpr float SPEED_BIAS = 1.5;
-constexpr float SCRIPED_CAM_HEIGHT = 1.5;
+constexpr float SPEED_BIAS = 1.0;
+constexpr float SCRIPED_CAM_HEIGHT = 1.8;
 
 void notificationOnLeft(std::string notificationText) {
 	UI::_SET_NOTIFICATION_TEXT_ENTRY("CELL_EMAIL_BCON");
@@ -146,49 +144,38 @@ void lidar(double horiFovMin, double horiFovMax, double vertFovMin, double vertF
 	notificationOnLeft(notice);
 }
 
-inline void stop() {
-	int vehicles[FREEZE_SIZE];
-	int vehicleCount = worldGetAllVehicles(vehicles, FREEZE_SIZE);
-	for (int x = 0; x < vehicleCount; x++)
-	{
-		if (vehicles[x] != PED::GET_VEHICLE_PED_IS_USING(PLAYER::PLAYER_PED_ID()))
-		{
-			ENTITY::FREEZE_ENTITY_POSITION(vehicles[x], true);
-		}
-		else
-		{
-			WAIT(3);
-			ENTITY::FREEZE_ENTITY_POSITION(vehicles[x], false);
-		}
-	}
-}
-
-inline void mode(int* time_step, bool* is_test) {
+inline void read_config(int* range, int* time_step, double* params) 
+{
 	while (true)
 	{
-		notificationOnLeft("Press F6 if for TRAINING else F7 for TEST");
-		if (IsKeyJustUp(VK_F7))
+		notificationOnLeft("Press F6 when you are ready");
+		if (IsKeyJustUp(VK_F6))
 		{
-			*time_step = TEST_STEP;
-			WAIT(1000);
-			notificationOnLeft("Begin sampling TEST data");
-			break;
-		}
-		else if (IsKeyJustUp(VK_F6))
-		{
-			*time_step = TRAIN_STEP;
-			*is_test = false;
-			WAIT(1000);
-			notificationOnLeft("Begin sampling TRAINING data");
+			std::ifstream inputFile;
+			std::string ignore, filename;
+			inputFile.open("D:/Games/gta/LiDAR-GTA-V/LiDAR GTA V/bin/Release/LiDAR GTA V/LiDAR GTA V.cfg");
+			if (inputFile.bad()) {
+				notificationOnLeft("Input file not found. Please re-install the plugin.");
+				continue;
+			}
+			inputFile >> ignore >> ignore >> ignore >> ignore >> ignore;
+			for (int i = 0; i != 6; ++i) {
+				inputFile >> ignore >> ignore >> params[i];
+			}
+			inputFile >> ignore >> ignore >> *time_step;
+			inputFile >> ignore >> ignore >> *range;
+			inputFile >> ignore >> ignore >> filename;
+			inputFile.close();
 			break;
 		}
 		WAIT(0);
 	}
+	WAIT(100);
+	notificationOnLeft("Set up configs with time_step " + std::to_string(*time_step));
 }
 
 inline void create_car(Vehicle* car) {
-	if (car == NULL) return;
-	notificationOnLeft("Press F6 to generate car");
+	notificationOnLeft("Press F6 to generate the car");
 	while (true) {
 		if (IsKeyJustUp(VK_F6))
 		{
@@ -197,7 +184,7 @@ inline void create_car(Vehicle* car) {
 			*car = VEHICLE::CREATE_VEHICLE(3609690755, pos.x, pos.y, pos.z, ENTITY::GET_ENTITY_HEADING(playerid), false, false);
 			if (*car == 0)
 			{
-				notificationOnLeft("Failed to generate the car, please change to a wider area");
+				notificationOnLeft("Failed to generate the car, please check it out");
 				WAIT(1000);
 				continue;
 			}
@@ -226,16 +213,16 @@ inline void adjust_cam_rot(Vehicle car, Cam camera) {
 	CAM::SET_CAM_ROT(camera, car_rot.x, car_rot.y, car_rot.z, 2);
 }
 
-inline void create_pcl(unsigned int* count, Cam camera) {
+inline void create_pcl(unsigned int* count, Cam camera, int range, double* params) {
 	std::string num = std::to_string(*count);
 	size_t precision = FILE_FORMAT - num.size();
 	num.insert(0, precision, '0');
 	std::string file_path = "data_set/" + num + ".txt";
-	lidar(0.0, 360.0, -14.0, 14.0, 0.17578125, 0.4375, 100, file_path, camera);
+	lidar(params[0], params[1], params[2], params[3], params[4], params[5], range, file_path, camera);
 	++(*count);
 }
 
-inline void record_mode(Vehicle car, Cam* camera, unsigned int* count, bool is_test) {
+inline void record_mode(Vehicle car, Cam* camera, unsigned int* count, int range, double* params) {
 	notificationOnLeft("F6 to start recording; F7 to record only one frame; F8 to gameplay vision; F9 to sampling vision");
 	while (true) {
 		if (*camera != -1) adjust_cam_rot(car, *camera);
@@ -245,8 +232,7 @@ inline void record_mode(Vehicle car, Cam* camera, unsigned int* count, bool is_t
 		}
 		else if (IsKeyJustUp(VK_F7))
 		{
-			if (is_test) stop();
-			create_pcl(count, *camera);
+			create_pcl(count, *camera, range, params);
 		}
 		else if (IsKeyJustUp(VK_F8))
 		{
@@ -286,7 +272,7 @@ inline bool check_car_speed(Vehicle car, bool* flag, Cam* camera) {
 	return true;
 }
 
-inline void recording_break(int time_step, bool* flag, Vehicle car, Cam* camera, bool is_test) {
+inline void recording_break(int time_step, bool* flag, Vehicle car, Cam* camera) {
 	SYSTEM::WAIT(time_step);
 	clock_t t0, t1;
 	t0 = clock();
@@ -306,19 +292,38 @@ inline void recording_break(int time_step, bool* flag, Vehicle car, Cam* camera,
 	WAIT(0);
 }
 
+inline void stop() {
+	int vehicles[FREEZE_SIZE];
+	int vehicleCount = worldGetAllVehicles(vehicles, FREEZE_SIZE);
+	for (int x = 0; x < vehicleCount; x++)
+	{
+		if (vehicles[x] != PED::GET_VEHICLE_PED_IS_USING(PLAYER::PLAYER_PED_ID()))
+		{
+			ENTITY::FREEZE_ENTITY_POSITION(vehicles[x], true);
+		}
+		else
+		{
+			WAIT(3);
+			ENTITY::FREEZE_ENTITY_POSITION(vehicles[x], false);
+		}
+	}
+}
+
 void ScriptMain() {
-	// This is the main function of the hole project
+	// This is the "main" function
 
 	// Initialization
 	Vehicle car(0);
-	unsigned int count(0); 
-	int time_step(0);
 	Cam camera(-1);
-	bool is_test = true;
+	unsigned int count_num_frames(0); 
+	int range(0), time_step(0);
+	double params[6]{};
 
-	// To decide if to sample TEST data or TRAIN data
-	mode(&time_step, &is_test);
+	// Read Config files
+	read_config(&range, &time_step, params);
 	
+	WAIT(1000);
+
 	// Create the vehicle that we will use
 	create_car(&car);
 
@@ -330,21 +335,20 @@ void ScriptMain() {
 	// The main loop
 	do
 	{
-		record_mode(car, &camera, &count, is_test);
+		record_mode(car, &camera, &count_num_frames, range, params);
 		notificationOnLeft("start recording with vehicleID " + std::to_string(car));
 		WAIT(500);
 		bool flag(true);
 		while (flag)
 		{
 			if (!check_car_speed(car, &flag, &camera)) continue;
-			if (is_test) stop();
 			adjust_cam_rot(car, camera);
-			create_pcl(&count, camera);
-			recording_break(time_step, &flag, car, &camera, is_test);
+			create_pcl(&count_num_frames, camera, range, params);
+			recording_break(time_step, &flag, car, &camera);
 		}
 		notificationOnLeft("Stopped recording");
 		WAIT(0);
-	} while (count < NUMBER_FRAME);
+	} while (count_num_frames < NUMBER_FRAME);
 
 	while (true)
 	{
