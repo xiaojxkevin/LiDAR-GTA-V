@@ -99,12 +99,12 @@ void lidar(double horiFovMin, double horiFovMax, double vertFovMin, double vertF
 	data_file.open(filePath);
 	TIME::PAUSE_CLOCK(true);
 	GAMEPLAY::SET_GAME_PAUSED(true);
-	Vector3 rot = CAM::GET_CAM_ROT(camera, 2);
+	Vector3 rot = CAM::GET_CAM_ROT(camera, 2); // https://docs.fivem.net/natives/?_0xAFBD61CC738D9EB9
 	Vector3 coord = CAM::GET_CAM_COORD(camera);
 	std::string cameraCenter = "cameraCenter " + std::to_string(coord.x) + " " + std::to_string(coord.y) + " " + std::to_string(coord.z) + "\n";
 	std::string camerRot = "camerRotation " + std::to_string(rot.x) + " " + std::to_string(rot.y) + " " + std::to_string(rot.z) + "\n";
 	data_file << cameraCenter;
-	data_file << camerRot;
+	data_file << camerRot; // In fact it should be zxy. since rotation order is 2
 	data_file << "x y z r g b norm_x norm_y norm_z\n";
 
 	for (double z = horiFovMin; z < horiFovMax; z += horiStep) {
