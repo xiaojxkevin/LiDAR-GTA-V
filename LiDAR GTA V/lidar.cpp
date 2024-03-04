@@ -14,7 +14,7 @@
 constexpr unsigned int NUMBER_FRAME = 1000;
 constexpr size_t FILE_FORMAT = 4;
 constexpr unsigned int FREEZE_SIZE = 2048;
-constexpr float SPEED_BIAS = 1.0;
+constexpr float SPEED_BIAS = 0.5;
 constexpr float SCRIPED_CAM_HEIGHT = 1.8;
 
 void notificationOnLeft(std::string notificationText) {
@@ -104,7 +104,7 @@ void lidar(double horiFovMin, double horiFovMax, double vertFovMin, double vertF
 	std::string cameraCenter = "cameraCenter " + std::to_string(coord.x) + " " + std::to_string(coord.y) + " " + std::to_string(coord.z) + "\n";
 	std::string camerRot = "camerRotation " + std::to_string(rot.x) + " " + std::to_string(rot.y) + " " + std::to_string(rot.z) + "\n";
 	data_file << cameraCenter;
-	data_file << camerRot; // In fact it should be zxy. since rotation order is 2
+	data_file << camerRot;
 	data_file << "x y z r g b norm_x norm_y norm_z\n";
 
 	for (double z = horiFovMin; z < horiFovMax; z += horiStep) {
